@@ -17,12 +17,21 @@
     "url": "git+ssh://git@github.com/Makepad-fr/jsgpt.git"
   },
   "keywords": [
-    "chatgpt",
-    "chat",
-    "gpt",
-    "playwright",
-    "automation",
-    "typescript"
+    "chatbot",
+    "OpenAI",
+    "GPT",
+    "GPT-3",
+    "ChatGPT",
+    "AI",
+    "artificial intelligence",
+    "natural language processing",
+    "NLP",
+    "JavaScript",
+    "TypeScript",
+    "nodejs",
+    "conversational AI",
+    "language model",
+    "machine learning"
   ],
   "author": "Makepad Developers <dev@makepad.fr>",
   "license": "Apache-2.0",
