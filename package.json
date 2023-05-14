@@ -1,16 +1,20 @@
 {
-  "name": "@makepad/gptjs",
-  "version": "0.0.1",
+  "name": "jsgpt",
+  "version": "0.0.2",
   "description": "A NodeJS library that let user's to use their ChatGPT accounts via TypeScript or JavaScript.",
-  "main": "dist/index.js",
+  "main": "dist/chatgpt.js",
+  "types": "dist/chagpt.d.ts",
   "scripts": {
-    "prestart": "./node_modules/.bin/tsc -p tsconfig.json",
-    "start": "node dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "./node_modules/.bin/tsc -p tsconfig.json",
+    "build": "npm run compile",
+    "prestart": "npm run build",
+    "postinstall": "npx playwright install",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Makepad-fr/gpt.js.git"
+    "url": "git+ssh://git@github.com/Makepad-fr/jsgpt.git"
   },
   "keywords": [
     "chatgpt",
@@ -23,9 +27,9 @@
   "author": "Makepad Developers <dev@makepad.fr>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Makepad-fr/gpt.js/issues"
+    "url": "https://github.com/Makepad-fr/jsgpt/issues"
   },
-  "homepage": "https://github.com/Makepad-fr/gpt.js#readme",
+  "homepage": "https://github.com/Makepad-fr/jsgpt#readme",
   "dependencies": {
     "playwright-core": "^1.33.0"
   },
