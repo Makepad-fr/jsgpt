@@ -12,6 +12,12 @@
     "test": "echo 'No test specified'",
     "prepublish": "npm run build"
   },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/Makepad-fr"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/Makepad-fr/jsgpt.git"
