@@ -34,10 +34,6 @@ export class Gpt {
         } catch (e) {
             throw e;
         }
-        // Click on login button
-        // Check if there's Captcha 
-        // Fill username
-        // Fill password
     }
 
     /**
