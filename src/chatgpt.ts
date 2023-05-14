@@ -3,7 +3,7 @@ import { BASE_URL, PageController } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 
-export class Gpt {
+export class ChatGPT {
 
     readonly #browser: Browser;
     readonly #context: BrowserContext;
@@ -81,12 +81,12 @@ export class Gpt {
      * Creates a new instance of Gpt asyncronhously
      * @returns A new instance of Gpt
      */
-    static async init(options: { headless: boolean, browserContextPath?: string }): Promise<Gpt> {
+    static async init(options: { headless: boolean, browserContextPath?: string }): Promise<ChatGPT> {
         const browser = await firefox.launch({ headless: options.headless });
         const context = await createBrowserContextFromLocal(browser, options.browserContextPath)
         const page = await context.newPage();
         await page.goto(BASE_URL);
-        return new Gpt(browser, context, page, options.browserContextPath);
+        return new ChatGPT(browser, context, page, options.browserContextPath);
     }
 }
 
