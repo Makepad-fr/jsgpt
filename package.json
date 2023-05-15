@@ -1,6 +1,6 @@
 {
   "name": "jsgpt",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A NodeJS library that let user's to use their ChatGPT accounts via TypeScript or JavaScript.",
   "main": "dist/chatgpt.js",
   "types": "dist/chagpt.d.ts",
