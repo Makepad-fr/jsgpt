@@ -2,6 +2,18 @@ import { Browser, BrowserContext, Cookie, Page, firefox } from "playwright-core"
 import { BASE_URL, PageController } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
+import { HttpClient } from "./http-client";
+import { CookieJar } from "./cookie-jar";
+
+interface UserCredentials {
+    username: string,
+    password: string
+}
+
+interface CallbackFunctions {
+    userCredentialsProvider?: () => Promise<UserCredentials>;
+    userCredentialsSaver?: (credentials: UserCredentials) => Promise<void>
+}
 
 export class ChatGPT {
 
@@ -9,19 +21,54 @@ export class ChatGPT {
     readonly #context: BrowserContext;
     readonly #page: Page;
     readonly #pageController: PageController;
-    readonly #browserContextPath: string|undefined;
+    readonly #browserContextPath: string | undefined;
+    
+    #internalHTTPClient?: HttpClient;
+    #saveUserCredentials: (credentials: UserCredentials) => Promise<void>;
+    #retriveUserCredentials: () => Promise<UserCredentials>
+    #userCredentials: UserCredentials | undefined;
+
 
     /**
      * Creates a new instance of Gpt
      * @param browser The browser instance to use inside of Gpt
      * @param page The page instance to use within Gpt
      */
-    private constructor(browser: Browser, context: BrowserContext, page: Page, browserContextPath: string|undefined) {
+    private constructor(browser: Browser, context: BrowserContext, page: Page, browserContextPath: string | undefined, callbacks?: CallbackFunctions) {
         this.#browser = browser;
         this.#context = context;
         this.#page = page;
         this.#pageController = new PageController(this.#page);
         this.#browserContextPath = browserContextPath;
+        if (callbacks) {
+            if (callbacks.userCredentialsSaver) {
+                this.#saveUserCredentials = callbacks.userCredentialsSaver;
+            } else {
+                this.#saveUserCredentials = async (credentials: UserCredentials) => {
+                    this.#userCredentials = credentials;
+                }
+            }
+            if (callbacks.userCredentialsProvider) {
+                this.#retriveUserCredentials = callbacks.userCredentialsProvider
+            } else {
+                this.#retriveUserCredentials = async () => {
+                    if (this.#userCredentials) {
+                        return this.#userCredentials
+                    }
+                    throw new Error('User credentials are missing, did you logged in once?');
+                };
+            }
+        } else {
+            this.#saveUserCredentials = async (credentials: UserCredentials) => {
+                this.#userCredentials = credentials;
+            }
+            this.#retriveUserCredentials = async () => {
+                if (this.#userCredentials) {
+                    return this.#userCredentials
+                }
+                throw new Error('User credentials are missing, did you logged in once?');
+            };
+        }
     }
 
     /**
@@ -39,12 +86,19 @@ export class ChatGPT {
             if (this.#browserContextPath !== undefined) {
                 await this.#saveBrowserContext();
             }
+            await this.#saveUserCredentials({username, password});
         } catch (e) {
             if (await this.#pageController.isLoggedIn()) {
                 console.debug('User is already logged in');
+                console.log('Cookies');
+                console.log(await this.#cookies)
                 return;
             }
             throw e;
+        } finally {
+            if (this.#internalHTTPClient === undefined) {
+                this.#internalHTTPClient = new HttpClient(new CookieJar((await this.#cookies), () => this.#regenerateCookies()));
+            }   
         }
     }
 
@@ -74,7 +128,30 @@ export class ChatGPT {
      * @param filePath The name of the file to save the browser context
      */
     async #saveBrowserContext() {
-        await this.#context.storageState({path: this.#browserContextPath});
+        await this.#context.storageState({ path: this.#browserContextPath });
+    }
+
+    /**
+     * Login again with the user credentials and regenerate cookies
+     * @returns The list of cookies regenerated after logging in again with the user credentials
+     */
+    async #regenerateCookies(): Promise<Cookie[]> {
+        if (this.#browserContextPath) {
+            fs.rmSync(this.#browserContextPath)
+        }
+        const {username, password} = await this.#retriveUserCredentials();
+        await this.login(username, password)
+        return this.#cookies;
+    }
+
+    /**
+     * Returns the internal HTTP client if it's defined, if it is not defined throws an Error.
+     */
+    get #httpClient(): HttpClient {
+        if (this.#internalHTTPClient === undefined) {
+            throw new Error('HTTP Client is not defined yet. Did you logged in ?');
+        }
+        return this.#internalHTTPClient;
     }
 
     /**
@@ -97,5 +174,5 @@ export class ChatGPT {
  * @returns A promise with the created browser context
  */
 async function createBrowserContextFromLocal(browser: Browser, filePath?: string): Promise<BrowserContext> {
-    return browser.newContext({storageState: (filePath && fs.existsSync(filePath)) ? filePath : undefined});
+    return browser.newContext({ storageState: (filePath && fs.existsSync(filePath)) ? filePath : undefined });
 }
