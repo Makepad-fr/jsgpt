@@ -1,6 +1,6 @@
 import { Browser, BrowserContext, Cookie, Page, firefox } from "playwright-core";
 import { BASE_URL, PageController } from "./page-controller";
-import { CONTINUE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
+import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 import { HttpClient } from "./http-client";
 import { CookieJar } from "./cookie-jar";
@@ -83,6 +83,7 @@ export class ChatGPT {
             await this.#page.click(CONTINUE_BUTTON_SELECTOR);
             await this.#page.fill(PASSWORD_INPUT_SELECTOR, password);
             await this.#page.click(CONTINUE_BUTTON_SELECTOR);
+            await this.#passDialog();
             if (this.#browserContextPath !== undefined) {
                 await this.#saveBrowserContext();
             }
@@ -101,6 +102,20 @@ export class ChatGPT {
             }   
         }
     }
+
+    async #passDialog() {
+        const dialogElement = await this.#page.waitForSelector(DIALOG_SELECTOR);
+        if (dialogElement === null) {
+            return;
+        }
+        let button: ElementHandle<HTMLElement> | null;
+        do {
+            button = await dialogElement.$(NEXT_BUTTON_SELECTOR) as ElementHandle<HTMLElement> | null;
+            await button?.click();
+        } while(button != null);
+        await (await dialogElement.$(DONE_BUTTON_SELECTOR))?.click();
+    }
+
 
     /**
      * Open log in form, by clicking to the log in button.
