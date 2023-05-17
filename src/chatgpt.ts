@@ -97,6 +97,13 @@ export class ChatGPT {
     }
 
     /**
+     * Get the current session data
+     */
+    get session(): SessionData|undefined {
+        return this.#session;
+    }
+
+    /**
      * Pass the announcements dialog right after the login
      */
     async #passDialog() {
