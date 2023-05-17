@@ -93,10 +93,6 @@ export class ChatGPT {
                 return;
             }
             throw e;
-        } finally {
-            await this.#pageController.sleep(10000);
-            console.log('Session');
-            console.log(this.#session);
         }
     }
 
