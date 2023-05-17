@@ -127,7 +127,6 @@ export class ChatGPT {
     async #openLoginForm() {
         if (this.#pageController.isLoginPage) {
             await this.#page.waitForLoadState('networkidle');
-            console.debug('Currently in the login page');
             await this.#page.click(LOGIN_BUTTON_SELECTOR);
             await this.#page.waitForLoadState('networkidle');
             return;
@@ -179,7 +178,7 @@ export class ChatGPT {
     async #handleRequestFinishedEvent(request: Request) {
         const requestUrl = request.url();
         if (requestUrl.startsWith(BASE_URL)) {
-            console.log(`Request: ${request.method()} ${requestUrl}`);
+            // console.log(`Request: ${request.method()} ${requestUrl}`);
             const response = await request.response();
             if (response) {
                 await this.#handleResponse(requestUrl, response);
