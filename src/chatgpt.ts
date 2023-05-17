@@ -1,5 +1,5 @@
 import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, ElementHandle } from "playwright-core";
-import { BASE_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
+import { ACCOUNTS_CHECK_API_URL, BASE_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 
@@ -27,6 +27,7 @@ export class ChatGPT {
 
     #session: SessionData | undefined;
     #availableModels: AvailableModelsData | undefined;
+    #account: UserAccountData | undefined;
 
     /**
      * Creates a new instance of Gpt
@@ -99,7 +100,7 @@ export class ChatGPT {
     /**
      * Get the current session data
      */
-    get session(): SessionData|undefined {
+    get session(): SessionData | undefined {
         return this.#session;
     }
 
@@ -115,7 +116,7 @@ export class ChatGPT {
         do {
             button = await dialogElement.$(NEXT_BUTTON_SELECTOR) as ElementHandle<HTMLElement> | null;
             await button?.click();
-        } while(button != null);
+        } while (button != null);
         await (await dialogElement.$(DONE_BUTTON_SELECTOR))?.click();
     }
 
@@ -163,7 +164,7 @@ export class ChatGPT {
         await this.login(username, password)
         return this.#cookies;
     }
-    
+
     /**
      * Initialies different event listeners on the current page.
      */
@@ -211,7 +212,9 @@ export class ChatGPT {
         if (requestURL.startsWith(MODELS_API_URL)) {
             this.#availableModels = data as AvailableModelsData;
         }
-        // TODO: Handle https://chat.openai.com/backend-api/accounts/check
+        if (requestURL.startsWith(ACCOUNTS_CHECK_API_URL)) {
+            this.#account = data as UserAccountData;
+        }
         // TODO: Handle https://chat.openai.com/backend-api/conversations
         // TODO: Handle https://chat.openai.com/backend-api/settings/beta_features
         // console.log('Response');
