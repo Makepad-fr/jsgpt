@@ -1,5 +1,5 @@
-import { Browser, BrowserContext, Cookie, Page, firefox } from "playwright-core";
-import { BASE_URL, PageController } from "./page-controller";
+import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, ElementHandle } from "playwright-core";
+import { BASE_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 import { HttpClient } from "./http-client";
@@ -22,7 +22,8 @@ export class ChatGPT {
     readonly #page: Page;
     readonly #pageController: PageController;
     readonly #browserContextPath: string | undefined;
-    
+
+    #session: SessionData | undefined;
     #internalHTTPClient?: HttpClient;
     #saveUserCredentials: (credentials: UserCredentials) => Promise<void>;
     #retriveUserCredentials: () => Promise<UserCredentials>
@@ -38,6 +39,7 @@ export class ChatGPT {
         this.#browser = browser;
         this.#context = context;
         this.#page = page;
+        this.#initPageListeners();
         this.#pageController = new PageController(this.#page);
         this.#browserContextPath = browserContextPath;
         if (callbacks) {
@@ -157,19 +159,62 @@ export class ChatGPT {
         if (this.#browserContextPath) {
             fs.rmSync(this.#browserContextPath)
         }
-        const {username, password} = await this.#retriveUserCredentials();
+        const { username, password } = await this.#retriveUserCredentials();
         await this.login(username, password)
         return this.#cookies;
     }
+    
+    /**
+     * Initialies different event listeners on the current page.
+     */
+    #initPageListeners() {
+        this.#page.on('requestfinished', async (request) => this.#handleRequestFinishedEvent(request));
+    }
 
     /**
-     * Returns the internal HTTP client if it's defined, if it is not defined throws an Error.
+     * Handle the requestfinished event, which is trigerred when a request is finished successfully.
+     * @param request The finished request to handle
      */
-    get #httpClient(): HttpClient {
-        if (this.#internalHTTPClient === undefined) {
-            throw new Error('HTTP Client is not defined yet. Did you logged in ?');
+    async #handleRequestFinishedEvent(request: Request) {
+        const requestUrl = request.url();
+        if (requestUrl.startsWith(BASE_URL)) {
+            console.log(`Request: ${request.method()} ${requestUrl}`);
+            const response = await request.response();
+            if (response) {
+                await this.#handleResponse(requestUrl, response);
+            }
         }
-        return this.#internalHTTPClient;
+    }
+
+    /**
+     * Handle an HTTP request response
+     * @param requestUrl The URL of the request
+     * @param response The response to handle
+     */
+    async #handleResponse(requestUrl: string, response: Response) {
+        const responseHeaders = response.headers();
+        if (responseHeaders && responseHeaders['content-type']?.includes('application/json')) {
+            await this.#handleJSONResponse(requestUrl, response, await response.json());
+        }
+    }
+
+    /**
+     * Handle a JSON response depending on the request URL and the response instance
+     * @param requestURL The URL of the request
+     * @param response The response object got for the request
+     * @param data The JSON data contained in the response
+     */
+    async #handleJSONResponse(requestURL: string, response: Response, data: unknown) {
+          if (requestURL.startsWith(SESSION_API_URL)) {
+                this.#session = data as SessionData;
+            }
+
+            // TODO: Handle https://chat.openai.com/backend-api/models
+            // TODO: Handle https://chat.openai.com/backend-api/accounts/check
+            // TODO: Handle https://chat.openai.com/backend-api/conversations
+            // TODO: Handle https://chat.openai.com/backend-api/settings/beta_features
+            // console.log('Response');
+            // console.log(await response?.json());
     }
 
     /**
@@ -194,3 +239,4 @@ export class ChatGPT {
 async function createBrowserContextFromLocal(browser: Browser, filePath?: string): Promise<BrowserContext> {
     return browser.newContext({ storageState: (filePath && fs.existsSync(filePath)) ? filePath : undefined });
 }
+
