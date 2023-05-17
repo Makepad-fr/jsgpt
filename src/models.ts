@@ -48,3 +48,19 @@ interface AvailableModelsData {
     models: Model[];
     categories: Category[];
 }
+
+interface AccountPlan {
+  is_paid_subscription_active: boolean;
+  subscription_plan: string;
+  account_user_role: string;
+  was_paid_customer: boolean;
+  has_customer_object: boolean;
+  subscription_expires_at_timestamp: number;
+}
+
+interface UserAccountData {
+  account_plan: AccountPlan;
+  user_country: string;
+  features: string[];
+}
+
