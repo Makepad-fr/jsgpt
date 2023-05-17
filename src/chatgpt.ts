@@ -103,6 +103,9 @@ export class ChatGPT {
         }
     }
 
+    /**
+     * Pass the announcements dialog right after the login
+     */
     async #passDialog() {
         const dialogElement = await this.#page.waitForSelector(DIALOG_SELECTOR);
         if (dialogElement === null) {
