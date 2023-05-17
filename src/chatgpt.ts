@@ -105,6 +105,20 @@ export class ChatGPT {
     }
 
     /**
+     * Get available models
+     */
+    get availableModels(): AvailableModelsData | undefined {
+        return this.#availableModels;
+    }
+
+    /**
+     * Get user account details or undefined
+     */
+    get account(): UserAccountData|undefined {
+        return this.#account;
+    }
+
+    /**
      * Pass the announcements dialog right after the login
      */
     async #passDialog() {
