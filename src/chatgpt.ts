@@ -2,8 +2,6 @@ import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, Elem
 import { BASE_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
-import { HttpClient } from "./http-client";
-import { CookieJar } from "./cookie-jar";
 
 interface UserCredentials {
     username: string,
@@ -23,11 +21,11 @@ export class ChatGPT {
     readonly #pageController: PageController;
     readonly #browserContextPath: string | undefined;
 
-    #session: SessionData | undefined;
-    #internalHTTPClient?: HttpClient;
     #saveUserCredentials: (credentials: UserCredentials) => Promise<void>;
     #retriveUserCredentials: () => Promise<UserCredentials>
     #userCredentials: UserCredentials | undefined;
+
+    #session: SessionData | undefined;
 
 
     /**
@@ -89,19 +87,16 @@ export class ChatGPT {
             if (this.#browserContextPath !== undefined) {
                 await this.#saveBrowserContext();
             }
-            await this.#saveUserCredentials({username, password});
+            await this.#saveUserCredentials({ username, password });
         } catch (e) {
             if (await this.#pageController.isLoggedIn()) {
-                console.debug('User is already logged in');
-                console.log('Cookies');
-                console.log(await this.#cookies)
                 return;
             }
             throw e;
         } finally {
-            if (this.#internalHTTPClient === undefined) {
-                this.#internalHTTPClient = new HttpClient(new CookieJar((await this.#cookies), () => this.#regenerateCookies()));
-            }   
+            await this.#pageController.sleep(10000);
+            console.log('Session');
+            console.log(this.#session);
         }
     }
 
@@ -128,13 +123,16 @@ export class ChatGPT {
      */
     async #openLoginForm() {
         if (this.#pageController.isLoginPage) {
+            await this.#page.waitForLoadState('networkidle');
             console.debug('Currently in the login page');
             await this.#page.click(LOGIN_BUTTON_SELECTOR);
+            await this.#page.waitForLoadState('networkidle');
             return;
         }
         // TODO: Create a custom exception
         throw new Error(`You need to be on the login page to open the login form.`);
     }
+
 
     /**
      * Return current page's cookies
