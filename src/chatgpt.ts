@@ -1,5 +1,5 @@
 import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, ElementHandle } from "playwright-core";
-import { BASE_URL, PageController, SESSION_API_URL } from "./page-controller";
+import { BASE_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 
@@ -26,7 +26,7 @@ export class ChatGPT {
     #userCredentials: UserCredentials | undefined;
 
     #session: SessionData | undefined;
-
+    #availableModels: AvailableModelsData | undefined;
 
     /**
      * Creates a new instance of Gpt
@@ -205,16 +205,17 @@ export class ChatGPT {
      * @param data The JSON data contained in the response
      */
     async #handleJSONResponse(requestURL: string, response: Response, data: unknown) {
-          if (requestURL.startsWith(SESSION_API_URL)) {
-                this.#session = data as SessionData;
-            }
-
-            // TODO: Handle https://chat.openai.com/backend-api/models
-            // TODO: Handle https://chat.openai.com/backend-api/accounts/check
-            // TODO: Handle https://chat.openai.com/backend-api/conversations
-            // TODO: Handle https://chat.openai.com/backend-api/settings/beta_features
-            // console.log('Response');
-            // console.log(await response?.json());
+        if (requestURL.startsWith(SESSION_API_URL)) {
+            this.#session = data as SessionData;
+        }
+        if (requestURL.startsWith(MODELS_API_URL)) {
+            this.#availableModels = data as AvailableModelsData;
+        }
+        // TODO: Handle https://chat.openai.com/backend-api/accounts/check
+        // TODO: Handle https://chat.openai.com/backend-api/conversations
+        // TODO: Handle https://chat.openai.com/backend-api/settings/beta_features
+        // console.log('Response');
+        // console.log(await response?.json());
     }
 
     /**
