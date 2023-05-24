@@ -64,3 +64,19 @@ interface UserAccountData {
   features: string[];
 }
 
+interface ConversationItem {
+  id: string;
+  title: string;
+  create_time: string;
+  update_time: string;
+  mapping: null;
+  current_node: null;
+}
+
+interface ConversationHistory {
+  items: ConversationItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_missing_conversations: boolean;
+}

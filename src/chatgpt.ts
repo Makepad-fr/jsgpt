@@ -1,7 +1,9 @@
 import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, ElementHandle } from "playwright-core";
-import { ACCOUNTS_CHECK_API_URL, BASE_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
+import { ACCOUNTS_CHECK_API_URL, BASE_URL, CONVERSATION_HISTORY_API_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
+import { EventEmitter } from "stream";
+import { IdBasedSet } from "./id-based-set";
 
 interface UserCredentials {
     username: string,
@@ -13,7 +15,16 @@ interface CallbackFunctions {
     userCredentialsSaver?: (credentials: UserCredentials) => Promise<void>
 }
 
-export class ChatGPT {
+
+const UNINITIALISED_ERROR = new Error('Account is not yet initialised, please wait until all properties are initialised')
+
+
+export const SESSION_UPDATED_EVENT = 'SESSION_UPDATED'
+export const AVAILABLE_MODELS_UPDATED_EVENT = 'AVAILABLE_MODELS_UPDATED'
+export const USER_ACCOUNT_DATA_UPDATED_EVENT = "USER_ACCOUNT_DATA_UPDATED";
+export const CONVERSATION_HISTORY_UPDATED_EVENT = "CONVERSATION_HISTORY_UPDATED";
+
+export class ChatGPT extends EventEmitter{
 
     readonly #browser: Browser;
     readonly #context: BrowserContext;
@@ -25,9 +36,10 @@ export class ChatGPT {
     #retriveUserCredentials: () => Promise<UserCredentials>
     #userCredentials: UserCredentials | undefined;
 
-    #session: SessionData | undefined;
-    #availableModels: AvailableModelsData | undefined;
-    #account: UserAccountData | undefined;
+    #_session: SessionData | undefined;
+    #_availableModels: AvailableModelsData | undefined;
+    #_account: UserAccountData | undefined;
+    #_conversationHistory: IdBasedSet<ConversationItem>;
 
     /**
      * Creates a new instance of Gpt
@@ -35,12 +47,14 @@ export class ChatGPT {
      * @param page The page instance to use within Gpt
      */
     private constructor(browser: Browser, context: BrowserContext, page: Page, browserContextPath: string | undefined, callbacks?: CallbackFunctions) {
+        super();
         this.#browser = browser;
         this.#context = context;
         this.#page = page;
         this.#initPageListeners();
         this.#pageController = new PageController(this.#page);
         this.#browserContextPath = browserContextPath;
+        this.#_conversationHistory = new IdBasedSet<ConversationItem>();
         if (callbacks) {
             if (callbacks.userCredentialsSaver) {
                 this.#saveUserCredentials = callbacks.userCredentialsSaver;
@@ -98,25 +112,82 @@ export class ChatGPT {
     }
 
     /**
+     * Updates the current session data with the given session data.
+     * It emits a SESSION_UPDATED_EVENT event after the internal session data is updated
+     */
+    set #session(data: SessionData) {
+        this.#_session = data;
+        this.emit(SESSION_UPDATED_EVENT, this);
+    }
+
+    /**
      * Get the current session data
      */
-    get session(): SessionData | undefined {
-        return this.#session;
+    get session(): SessionData {
+        if (this.#_session) {
+            return this.#_session;
+        }
+        throw UNINITIALISED_ERROR;
+    } 
+
+    /**
+     * Update internal available models property with the given available models data
+     * this operations emits AVAILABLE_MODELS_UPDATED_EVENT event
+     */
+    set #availableModels(data: AvailableModelsData) {
+        this.#_availableModels = data;
+        this.emit(AVAILABLE_MODELS_UPDATED_EVENT, this);
     }
 
     /**
      * Get available models
      */
-    get availableModels(): AvailableModelsData | undefined {
-        return this.#availableModels;
+    get availableModels(): AvailableModelsData {
+        if (this.#_availableModels) {
+            return this.#_availableModels;
+        }
+        throw UNINITIALISED_ERROR;
+    }
+
+
+    /**
+     * Updates the internal user account data property and emits USER_ACCOUNT_DATA_UPDATED_EVENT event
+     */
+    set #account(data: UserAccountData) {
+        this.#_account = data;
+        this.emit(ACCOUNTS_CHECK_API_URL, this);
     }
 
     /**
      * Get user account details or undefined
      */
-    get account(): UserAccountData|undefined {
-        return this.#account;
+    get account(): UserAccountData {
+        if (this.#_account) {
+            return this.#_account;
+        }
+        throw UNINITIALISED_ERROR;
     }
+
+
+    /**
+     * Adds an array of ConversationItem to the current conversation history. If at least one item is added, 
+     * it triggers CONVERSATION_HISTORY_UPDATED_EVENT event
+     * @param data Items to add to the conversation history
+     */
+    #addItemsToConversationHistory(data: ConversationItem[]) {
+        const addedElementCount = this.#_conversationHistory.addAll(data);
+        if (addedElementCount > 0) {
+            this.emit(CONVERSATION_HISTORY_UPDATED_EVENT, this);
+        }
+    }
+
+    /**
+     * Get the user's conversation history
+     */
+    get conversationHistory(): ConversationItem[] {    
+        return this.#_conversationHistory.array;
+     }
+
 
     /**
      * Pass the announcements dialog right after the login
@@ -229,7 +300,12 @@ export class ChatGPT {
         if (requestURL.startsWith(ACCOUNTS_CHECK_API_URL)) {
             this.#account = data as UserAccountData;
         }
-        // TODO: Handle https://chat.openai.com/backend-api/conversations
+        if (requestURL.startsWith(CONVERSATION_HISTORY_API_URL)) {
+            this.#addItemsToConversationHistory((data as ConversationHistory).items)
+            
+        }
+        console.debug(`New request to URL: ${requestURL}`)
+
         // TODO: Handle https://chat.openai.com/backend-api/settings/beta_features
         // console.log('Response');
         // console.log(await response?.json());
