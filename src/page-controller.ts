@@ -6,6 +6,7 @@ export const CHAT_URL = `${BASE_URL}/chat`;
 export const LOGIN_PAGE_URL = `${BASE_URL}/auth/login`;
 export const SESSION_API_URL = `${BASE_URL}/api/auth/session`;
 export const BACKEND_API_BASE_URL = `${BASE_URL}/backend-api`;
+
 export const MODELS_API_URL = `${BACKEND_API_BASE_URL}/models`;
 export const ACCOUNTS_CHECK_API_URL = `${BACKEND_API_BASE_URL}/accounts/check`;
 export const CONVERSATION_HISTORY_API_URL = `${BACKEND_API_BASE_URL}/conversations`;
