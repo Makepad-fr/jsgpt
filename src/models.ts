@@ -80,3 +80,9 @@ interface ConversationHistory {
   offset: number;
   has_missing_conversations: boolean;
 }
+
+interface BetaFeatures {
+  browsing: boolean,
+  codeInterpreter: boolean,
+  plugins: boolean
+}

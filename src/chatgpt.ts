@@ -1,5 +1,5 @@
 import { Browser, BrowserContext, Cookie, Page, firefox, Response, Request, ElementHandle } from "playwright-core";
-import { ACCOUNTS_CHECK_API_URL, BASE_URL, CONVERSATION_HISTORY_API_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
+import { ACCOUNTS_CHECK_API_URL, BASE_URL, BETA_FEATURES_API_URL, CONVERSATION_HISTORY_API_URL, MODELS_API_URL, PageController, SESSION_API_URL } from "./page-controller";
 import { CONTINUE_BUTTON_SELECTOR, DIALOG_SELECTOR, DONE_BUTTON_SELECTOR, EMAIL_INPUT_SELECTOR, LOGIN_BUTTON_SELECTOR, NEXT_BUTTON_SELECTOR, PASSWORD_INPUT_SELECTOR } from "./selectors";
 import fs from 'fs';
 import { EventEmitter } from "stream";
@@ -23,6 +23,7 @@ export const SESSION_UPDATED_EVENT = 'SESSION_UPDATED'
 export const AVAILABLE_MODELS_UPDATED_EVENT = 'AVAILABLE_MODELS_UPDATED'
 export const USER_ACCOUNT_DATA_UPDATED_EVENT = "USER_ACCOUNT_DATA_UPDATED";
 export const CONVERSATION_HISTORY_UPDATED_EVENT = "CONVERSATION_HISTORY_UPDATED";
+export const BETA_FEATURES_UPDATED_EVENT = 'BETA_FEATURES_UPDATED';
 
 export class ChatGPT extends EventEmitter{
 
@@ -40,6 +41,7 @@ export class ChatGPT extends EventEmitter{
     #_availableModels: AvailableModelsData | undefined;
     #_account: UserAccountData | undefined;
     #_conversationHistory: IdBasedSet<ConversationItem>;
+    #_betaFeatures: BetaFeatures|undefined;
 
     /**
      * Creates a new instance of Gpt
@@ -109,6 +111,25 @@ export class ChatGPT extends EventEmitter{
             }
             throw e;
         }
+    }
+
+    /**
+     * Updates beta features with the given data and emits BETA_FEATURES_UPDATED_EVENT event
+     */
+    set #betaFeatures(data: BetaFeatures) {
+        this.#_betaFeatures = data;
+        this.emit(BETA_FEATURES_UPDATED_EVENT, this);
+    }
+
+
+    /**
+     * Get the current beta features
+     */
+    get betaFeatures(): BetaFeatures {
+        if (this.#_betaFeatures) {
+            return this.#_betaFeatures;
+        }
+        throw UNINITIALISED_ERROR;
     }
 
     /**
@@ -302,7 +323,9 @@ export class ChatGPT extends EventEmitter{
         }
         if (requestURL.startsWith(CONVERSATION_HISTORY_API_URL)) {
             this.#addItemsToConversationHistory((data as ConversationHistory).items)
-            
+        }
+        if (requestURL.startsWith(BETA_FEATURES_API_URL)) {
+            this.#betaFeatures = data as BetaFeatures;
         }
         console.debug(`New request to URL: ${requestURL}`)
 
